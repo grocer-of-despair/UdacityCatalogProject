@@ -1,0 +1,48 @@
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
+<div class="row">
+  <div class="col-md-3 back-arrow">
+		<a href="{{url_for('getConcepts', category_id=category_id)}}" class="glyphicon glyphicon-arrow-left padding-left"></a>
+  </div>
+  <div class="col-md-8">
+    <div class="flash">
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <ul>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+</div>
+<div class="row">
+	<div class="col-md-12 col-md-offset-4 padding-bottom">
+		<h1>Concepts</h1>
+	</div>
+	<div class="col-md-offset-1">
+		{% for concept in concepts %}
+		<div class="col-md-3 category-box">
+			<div class="row">
+				<div class="col-md-8"><p><a href="{{url_for('getConceptInfo', concept_id=concept.id, category_id=category_id)}}">{{concept.name}}</a></p></div>
+				<div class="col-md-1 edit-category-icon">
+          {% if user.id == concept.user_id %}
+					<a href="{{url_for('editConcept', concept_id=concept.id, category_id=category_id)}}" class="glyphicon glyphicon-edit"></a>
+          {% endif %}
+				</div>
+				<div class="col-md-1 edit-category-icon">
+          {% if user.id == concept.user_id %}
+					<a href="{{url_for('deleteConcept', concept_id=concept.id, category_id=category_id)}}" class="glyphicon glyphicon-remove" title="Delete"></a>
+          {% endif %}
+				</div>
+			</div>
+		</div>
+		{% endfor %}
+	</div>
+</div>
+
+
+{% endblock %}

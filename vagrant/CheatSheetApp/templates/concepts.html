@@ -1,0 +1,98 @@
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
+<div class="row">
+  <div class="col-md-3 back-arrow">
+    <a href="{{url_for('getCategories')}}" class="glyphicon glyphicon-arrow-left padding-left"></a>
+  </div>
+  <div class="col-md-8">
+    <div class="flash">
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <ul>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+  <div class="col-md-1">
+    <div class="dropdown json-dropdown">
+      <button class="btn-xs dropdown-toggle json-button" type="button" data-toggle="dropdown">JSON
+        <span class="caret"></span></button>
+      <ul class="dropdown-menu">
+        <li><a href="{{url_for('categoriesJSON')}}" target="_blank">Categories</a></li>
+        <li><a href="{{url_for('conceptsJSON', category_id=categories.id)}}" target="_blank">Concepts</a></li>
+        <li><a href="{{url_for('linksJSON', category_id=categories.id)}}" target="_blank">Links</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+<div class="row">
+	<div class="col-md-3 category-list ">
+		<div class="row">
+      <div class="col-md-9">
+        <h4 class="padding-left">{{categories.name}} Concepts</h4>
+      </div>
+      <div class="col-md-1 leftbar-icons">
+        {% if 'username' in login_session %}
+        <a href="{{url_for('createConcept', category_id=categories.id)}}" class="glyphicon glyphicon-plus"></a>
+        {% endif %}
+      </div>
+      <div class="col-md-1 leftbar-icons">
+        {% if 'username' in login_session %}
+        <a href="{{url_for('getEditConcepts', category_id=categories.id)}}" class="glyphicon glyphicon-pencil"></a>
+        {% endif %}
+      </div>
+    </div>
+		<div class="row list-group">
+      <div class="col-md-12">
+        <a href="{{url_for('getConcepts', category_id=categories.id)}}" class="list-group-item">{{categories.name}} Links</a>
+  			{% for concept in concepts %}
+  			<a href="{{url_for('getConceptInfo', category_id=categories.id, concept_id=concept.id)}}" class="list-group-item">{{concept.name}} </a>
+  			{% endfor %}
+      </div>
+		</div>
+	</div>
+	<div class="col-md-9">
+    <div class="row">
+    <div class="col-md-9"><h1>{{categories.name}} Links</h1></div>
+    <div class="col-md-3 leftbar-icons"><a data-toggle="collapse" href="#collapse1">Add Link</a></div>
+      <div id="collapse1" class="panel-collapse collapse col-md-12">
+        <div class="panel-body">
+          <form action="#" data-toggle="validator" role="form" method = "post">
+            <div class="form-group">
+              <div class="col-md-3 form-group">
+                <label for="name">Name:</label>
+                <input type ="text" pattern="^[_A-z0-9]{1,}$" data-error="What's going on here?" class="form-control" maxlength="100" name="name" required>
+                <div class="help-block with-errors"></div>
+              </div>
+              <div class="col-md-6 form-group">
+                <label for="link">Link:</label>
+                <input type="text" class="form-control" data-error="I don't wanna talk about it!" maxlength="100" name="link" required>
+                <div class="help-block with-errors"></div>
+              </div>
+              <div class="form-group padding-add">
+                <button type="submit" class="btn btn-success" id="submit" type="submit">
+                      <span class="glyphicon glyphicon-plus" aria-hidden="true"></span>Add</button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <br>
+    <div>
+      <ul>
+      {% for link in links %}
+			<li><a href="{{link.link}}" class="" target="_blank">{{link.name}} </a></li>
+			{% endfor %}
+      </ul>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

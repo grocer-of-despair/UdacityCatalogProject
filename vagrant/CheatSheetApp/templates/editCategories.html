@@ -1,0 +1,61 @@
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
+<div class="row">
+  <div class="col-md-3 back-arrow">
+		<a href="{{url_for('getCategories')}}" class="glyphicon glyphicon-arrow-left padding-left"></a>
+  </div>
+  <div class="col-md-8">
+    <div class="flash">
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <ul>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+</div>
+<div class="row">
+	<div class="col-md-12 col-md-offset-4 padding-bottom">
+		<h1>Categories</h1>
+	</div>
+	<div class="col-md-offset-1">
+		{% for category in categories %}
+		<div class="col-md-3 category-box">
+      <div class="row">
+				<div class="col-md-4"></div>
+				<div class="col-md-3 category-logo">
+          {% if category.picture %}
+          <img src="{{ category.picture }}" alt="{{ category.name }} Logo">
+          {% else %}
+          <img src="http://www.lessonhacker.com/wp-content/uploads/2013/05/CS-icon.png" alt="{{ category.name }} Logo">
+          {% endif %}
+				</div>
+				<div class="col-md-2"></div>
+			</div>
+      <div class="row">
+				<div class="col-md-8">
+          <p>
+            <a href="{{url_for('getConcepts', category_id=category.id)}}">{{category.name}}</a>
+          </p>
+        </div>
+				<div class="col-md-1 edit-category-icon">
+          {% if user.id == category.user_id %}
+					<a href="{{url_for('editCategory', category_id=category.id)}}" class="glyphicon glyphicon-edit"></a>
+          {% endif %}
+				</div>
+				<div class="col-md-1 edit-category-icon">
+          {% if user.id == category.user_id %}
+					<a href="{{url_for('deleteCategory', category_id=category.id)}}" class="glyphicon glyphicon-remove" title="Delete"></a>
+          {% endif %}
+				</div>
+			</div>
+		</div>
+		{% endfor %}
+	</div>
+</div>
+{% endblock %}

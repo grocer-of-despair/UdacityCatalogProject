@@ -1,0 +1,72 @@
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
+<div class="row">
+  <div class="col-md-3">
+  </div>
+  <div class="col-md-8">
+    <div class="flash">
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <ul>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+  <div class="col-md-1">
+    <div class="dropdown json-dropdown">
+      <button class="btn-xs dropdown-toggle json-button" type="button" data-toggle="dropdown">JSON
+        <span class="caret"></span></button>
+      <ul class="dropdown-menu">
+        <li><a href="{{url_for('categoriesJSON')}}" target="_blank">Categories</a></li>
+				<li><a href="{{url_for('conceptsJSON', category_id=0)}}" target="_blank">Concepts</a></li>
+        <li><a href="{{url_for('linksJSON', category_id=0)}}" target="_blank">Links</a></li>
+      </ul>
+    </div>
+  </div>
+</div>
+<div class="row">
+	<div class="col-md-3 category-list ">
+		<div class="row">
+      <div class="col-md-9">
+        <h4 class="padding-left">Categories</h4>
+      </div>
+      <div class="col-md-1 leftbar-icons">
+        {% if 'username' in login_session %}
+				<a href="{{url_for('createCategory')}}" class="glyphicon glyphicon-plus"></a>
+        {% endif %}
+      </div>
+      <div class="col-md-1 leftbar-icons">
+        {% if 'username' in login_session %}
+        <a href="{{url_for('getEditCategories')}}" class="glyphicon glyphicon-pencil"></a>
+        {% endif %}
+      </div>
+    </div>
+		<div class="row list-group">
+      <div class="col-md-12">
+				{% for category in categories %}
+				{% if category[1]==None%}
+				<a href="{{url_for('getConcepts', category_id=category.Category.id)}}" class="list-group-item">{{category.Category.name}} <span class="badge">0</span></a>
+				{% else %}
+				<a href="{{url_for('getConcepts', category_id=category.Category.id)}}" class="list-group-item">{{category.Category.name}} <span class="badge">{{category[1]}}</span></a>
+				{% endif %}
+				{% endfor %}
+      </div>
+		</div>
+	</div>
+	<div class="col-md-9 category-list padding-left">
+		<h1>Recent</h1>
+		<div class="row padding-top-sml padding-left">
+		{% for concept in concepts %}
+			<div class="col-md-5"><p><a href="{{url_for('getConceptInfo', category_id=concept.category.id, concept_id=concept.id)}}">{{concept.name}}</a>  ({{concept.category.name}})</p></div>
+		{% endfor %}
+		</div>
+	</div>
+</div>
+
+
+{% endblock %}

@@ -1,0 +1,67 @@
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
+<div class="row">
+  <div class="col-md-3 back-arrow">
+    <a href="{{url_for('getCategories')}}" class="glyphicon glyphicon-arrow-left padding-left"></a>
+  </div>
+  <div class="col-md-8">
+    <div class="flash">
+      {% with messages = get_flashed_messages() %}
+      {% if messages %}
+      <ul>
+        {% for message in messages %}
+        <li>{{ message }}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+      {% endwith %}
+    </div>
+  </div>
+  <div class="col-md-1">
+    <div class="dropdown json-dropdown">
+      <button class="btn-xs dropdown-toggle json-button" type="button" data-toggle="dropdown">JSON
+        <span class="caret"></span></button>
+      <ul class="dropdown-menu">
+        <li><a href="{{url_for('categoriesJSON')}}" target="_blank">Categories</a></li>
+        <li><a href="{{url_for('conceptsJSON', category_id=categories.id)}}" target="_blank">Concepts</a></li>
+        <li><a href="{{url_for('linksJSON', category_id=categories.id)}}" target="_blank">Links</a></li>
+      </ul>
+    </div>
+	</div>
+</div>
+<div class="row">
+	<div class="col-md-3 category-list">
+		<div class="row">
+			<div class="col-md-9">
+        <h4 class="padding-left">{{categories.name}} Concepts</h4>
+      </div>
+			<div class="col-md-1 leftbar-icons">
+        <a href="{{url_for('createConcept', category_id=categories.id)}}" class="glyphicon glyphicon-plus"></a>
+      </div>
+      <div class="col-md-1 leftbar-icons">
+        <a href="{{url_for('getEditConcepts', category_id=categories.id)}}" class="glyphicon glyphicon-pencil"></a>
+      </div>
+		</div>
+		<div class="row list-group">
+			<div class="col-md-12">
+        <a href="{{url_for('getConcepts', category_id=categories.id)}}" class="list-group-item">{{categories.name}} Links</a>
+  			{% for concept in concepts %}
+  			<a href="{{url_for('getConceptInfo', category_id=categories.id, concept_id=concept.id)}}" class="list-group-item">{{concept.name}} </a>
+  			{% endfor %}
+      </div>
+		</div>
+	</div>
+	<div class="col-md-9">
+    <div class="row">
+			<h1 class="padding-left">{{conceptInfo.name}}</h1>
+			<br>
+			<div class="col-md-9 margin-left">
+				<p>{{conceptInfo.description}}</p>
+	      <pre><code>{{conceptInfo.code}}</code></pre>
+			</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}

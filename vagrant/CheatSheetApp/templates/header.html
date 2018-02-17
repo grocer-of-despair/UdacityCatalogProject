@@ -1,0 +1,25 @@
+<nav class="navbar navbar-inverse navigation">
+  <div class="container-fluid">
+    <div class="navbar-header">
+      <span class="navbar-title" href="{{url_for('getCategories')}}">Cheat Sheet</span>
+    </div>
+    <ul class="nav navbar-nav">
+      <li class="active"><a href="{{url_for('getCategories')}}" class="glyphicon glyphicon-eye-open"></a></li>
+    </ul>
+    <ul class="nav navbar-nav navbar-right">
+      {%if 'username' not in session %}
+      <li><a href="{{url_for('showLogin')}}" class="navbar-login"><span class="glyphicon glyphicon-log-in"></span>Login</a></li>
+      {% else %}
+      <li class="dropdown navbar-login">
+          <a href="#" class="dropdown-toggle" data-toggle="dropdown">Hi, {{login_session['username']}} <b class="caret"></b></a>
+          <ul class="dropdown-menu">
+            <li align="center" class="well">
+                <div><img class="img-responsive  img-rounded" style="padding:2%;" src="{{login_session['picture']}}"/></div>
+                <a href="{{url_for('disconnect')}}"><span class="glyphicon glyphicon-log-out"></span> Logout</a>
+            </li>
+           </ul>
+        </li>
+      {% endif %}
+    </ul>
+  </div>
+</nav>

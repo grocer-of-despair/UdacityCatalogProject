@@ -1,0 +1,36 @@
+{% extends "main.html" %}
+{% block content %}
+{% include "header.html" %}
+<div class="row">
+  <div class="col-md-3"></div>
+  <div class="col-md-8"></div>
+  <div class="col-md-1"></div>
+</div>
+<div class="row">
+	<div class="col-md-3 category-list"></div>
+	<div class="col-md-9 category-list padding-left">
+		<div class="row padding-top-sml">
+			<div class="col-md-6 col-md-offset-1 padding-top form-box">
+				<h1>New Category</h1>
+				<div class="padding-bottom"></div>
+				<form action="#" data-toggle="validator" role="form" method="post">
+					<div class="form-group">
+						<label for="name">Name:</label>
+						<input type="text" pattern="^[_A-z0-9]{1,}$" class="form-control" maxlength="100" name="name" data-error="Please Sir?" placeholder="Category" required>
+						<div class="help-block with-errors"></div>
+            <label for="name">Image URL:</label>
+						<input type="text" class="form-control" name="picture">
+						<div class="padding-bottom"></div>
+						<button type="submit" class="btn btn-success" id="submit">
+							<span class="glyphicon glyphicon-ok" aria-hidden="true"></span>Create</button>
+						<button onclick="window.location.href='{{url_for('getCategories')}}'" type="button" class="btn btn-danger">
+							<span class="glyphicon glyphicon-remove" aria-hidden="true"><a href='{{url_for('getCategories')}}'></a></span>Cancel</button>
+						<div class="padding-bottom"></div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+</div>
+
+{% endblock %}
