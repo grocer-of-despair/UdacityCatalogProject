@@ -14,6 +14,7 @@ import httplib2
 import json
 import requests
 import time
+import logging
 from oauth2client.client import flow_from_clientsecrets, FlowExchangeError
 from redis import Redis
 
@@ -31,12 +32,22 @@ Base.metadata.bind = engine
 DBSession = sessionmaker(bind=engine)
 session = DBSession()
 
+# Define logger configuration
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 
 # Define RateLimit Class
 class RateLimit(object):
+    """
+        This defines the RateLimit class
+    """
     expiration_window = 10
 
     def __init__(self, key_prefix, limit, per, send_x_headers):
+        """
+            This initialises the RateLimit class
+        """
         self.reset = (int(time.time()) // per) * per + per
         self.key = key_prefix + str(self.reset)
         self.limit = limit
@@ -52,10 +63,16 @@ class RateLimit(object):
 
 
 def get_view_rate_limit():
+    """
+        This function gets the specified View Rate Limit
+    """
     return getattr(g, '_view_rate_limit', None)
 
 
 def on_over_limit(limit):
+    """
+        This function determines what happens when the Rate Limit is exceeded
+    """
     return (jsonify({'data': 'You hit the rate limit', 'error': '429'}), 429)
 
 
@@ -63,6 +80,9 @@ def ratelimit(limit, per=300, send_x_headers=True,
               over_limit=on_over_limit,
               scope_func=lambda: request.remote_addr,
               key_func=lambda: request.endpoint):
+    """
+        This creates a new Rate Limit Object
+    """
     def decorator(f):
         def rate_limited(*args, **kwargs):
             key = 'rate-limit/%s/%s/' % (key_func(), scope_func())
@@ -77,6 +97,9 @@ def ratelimit(limit, per=300, send_x_headers=True,
 
 @app.after_request
 def inject_x_rate_headers(response):
+    """
+        This injects the Headers from the Rate Limit response
+    """
     limit = get_view_rate_limit()
     if limit and limit.send_x_headers:
         h = response.headers
@@ -89,6 +112,9 @@ def inject_x_rate_headers(response):
 @app.route('/rate-limited')
 @ratelimit(limit=300, per=30 * 1)
 def index():
+    """
+        Returns the Rate Limit Response
+    """
     return jsonify({'response': 'This is a rate limited response'})
 
 
@@ -96,6 +122,10 @@ def index():
 # Create anti-forgery state token
 @app.route('/login')
 def showLogin():
+    """
+        This function creates an anti-forgery token and renders the
+        Login Template
+    """
     state = ''.join(random.choice(string.ascii_uppercase + string.digits)
                     for x in xrange(32))
     login_session['state'] = state
@@ -106,12 +136,15 @@ def showLogin():
 #  Facebook Connect
 @app.route('/fbconnect', methods=['POST'])
 def fbconnect():
+    """
+        This function connects to Facebook Authorization for the app
+    """
     if request.args.get('state') != login_session['state']:
         response = make_response(json.dumps('Invalid state parameter.'), 401)
         response.headers['Content-Type'] = 'application/json'
         return response
     access_token = request.data
-    print "access token received %s " % access_token
+    logger.debug("access token received %s ", access_token)
 
     app_id = json.loads(open('fb_client_secrets.json', 'r').read())[
         'web']['app_id']
@@ -139,8 +172,8 @@ def fbconnect():
             &fields=name,id,email' % token
     h = httplib2.Http()
     result = h.request(url, 'GET')[1]
-    # print "url sent for API access:%s"% url
-    # print "API JSON result: %s" % result
+    logger.debug("url sent for API access:%s", url)
+    logger.debug("API JSON result: %s", result)
     data = json.loads(result)
     login_session['provider'] = 'facebook'
     login_session['username'] = data["name"]
@@ -182,6 +215,11 @@ def fbconnect():
 # Facebook Disconnect
 @app.route('/fbdisconnect')
 def fbdisconnect():
+    """
+        This function is used by the **disconnect** function
+
+        If the user is logged in with Facebook they will be disconnected
+    """
     facebook_id = login_session['facebook_id']
     # The access token must me included to successfully logout
     access_token = login_session['access_token']
@@ -195,6 +233,9 @@ def fbdisconnect():
 # Google Connect
 @app.route('/gconnect', methods=['POST'])
 def gconnect():
+    """
+        This function connects to the app using Google+ Authorization
+    """
     # Validate state token
     if request.args.get('state') != login_session['state']:
         response = make_response(json.dumps('Invalid state parameter.'), 401)
@@ -238,7 +279,7 @@ def gconnect():
     if result['issued_to'] != CLIENT_ID:
         response = make_response(
             json.dumps("Token's client ID does not match app's."), 401)
-        print "Token's client ID does not match app's."
+        logger.info("Token's client ID does not match app's.")
         response.headers['Content-Type'] = 'application/json'
         return response
 
@@ -281,7 +322,7 @@ def gconnect():
                 150px;-webkit-border-radius:
                 150px;-moz-border-radius: 150px;"> '''
     flash("You are now logged in as %s" % login_session['username'])
-    print "Done!"
+    logger.info("Done!")
     return output
 
 # User Helper Functions
@@ -289,24 +330,37 @@ def gconnect():
 
 # Create User info in Database
 def createUser(login_session):
+    """
+        This function creates a new user
+
+        It takes data from the login session and creates a new User in the
+        database, returning the newly created 'id'
+    """
     newUser = User(name=login_session['username'], email=login_session[
                    'email'], picture=login_session['picture'])
     session.add(newUser)
     session.commit()
-    user = session.query(User).filter_by(email=login_session['email']).one()
+    user = session.query(User).filter_by(
+            email=login_session['email']).one_or_none()
     return user.id
 
 
 # Get User Info from Database
 def getUserInfo(user_id):
-    user = session.query(User).filter_by(id=user_id).one()
+    """
+        This function retrieves a users data from the database
+    """
+    user = session.query(User).filter_by(id=user_id).one_or_none()
     return user
 
 
 # Get User ID from Database
 def getUserID(email):
+    """
+        This function gets a users ID from the database using an email address
+    """
     try:
-        user = session.query(User).filter_by(email=email).one()
+        user = session.query(User).filter_by(email=email).one_or_none()
         return user.id
     except(ValueError):
         return None
@@ -316,7 +370,12 @@ def getUserID(email):
 # login_session
 @app.route('/gdisconnect')
 def gdisconnect():
-    # Only disconnect a connected user.
+    """
+        This function disconnects a User logged in using Google+
+
+        It only disconnects a user if they are connected, it also revokes and
+        resets a users login session
+    """
     access_token = login_session.get('access_token')
     if access_token is None:
         response = make_response(
@@ -345,6 +404,12 @@ def gdisconnect():
 # Disconnect based on provider
 @app.route('/disconnect')
 def disconnect():
+    """
+        This function disconnects a user
+
+        It connects with Google and Facebook disconnect functions.
+        It deletes each piece of data from the login session
+    """
     if 'provider' in login_session:
         if login_session['provider'] == 'google':
             gdisconnect()
@@ -378,6 +443,11 @@ def override_url_for():
 
 
 def dated_url_for(endpoint, **values):
+    """
+        This function appends a timestamp to any url_for('static') CSS Link
+
+        This is used to bypass the Browser Cache
+    """
     if endpoint == 'static':
         filename = values.get('filename', None)
         if filename:
@@ -391,6 +461,9 @@ def dated_url_for(endpoint, **values):
 @app.route('/')
 @app.route('/categories/')
 def getCategories():
+    """
+        This function renders the Root page and categories Template
+    """
     stmt = session.query(Concept.category_id, func.count(Concept.category_id)
                          .label('concept_count')).group_by(
                          Concept.category_id).subquery()
@@ -410,14 +483,22 @@ def getCategories():
 # JSON APIs to view Category Information
 @app.route('/categories/JSON')
 def categoriesJSON():
+    """
+        This function creates an API endpoint for the Categories Table
+    """
     categories = session.query(Category).order_by(asc(Category.name))
     return jsonify(Categories=[c.serialize for c in categories])
 
 
 @app.route('/edit_categories')
 def getEditCategories():
+    """
+        This function renders the Editable Categories template
+    """
     categories = session.query(Category).order_by(asc(Category.name))
-    user = session.query(User).filter_by(email=login_session['email']).one()
+    if 'username' in login_session:
+        user = session.query(User).filter_by(
+                email=login_session['email']).one_or_none()
     return render_template('editCategories.html', categories=categories,
                            login_session=login_session, user=user)
 
@@ -426,7 +507,15 @@ def getEditCategories():
 @app.route('/categories/new/', methods=['GET', 'POST'])
 @ratelimit(limit=300, per=30 * 1)
 def createCategory():
-    user = session.query(User).filter_by(email=login_session['email']).one()
+    """
+        This function renders the Create new Category Template
+
+        If the user is not logged in it redirects to the Login page
+    """
+    if 'username' not in login_session:
+        return redirect('/login')
+    user = session.query(User).filter_by(
+            email=login_session['email']).one_or_none()
     if request.method == 'POST':
         newCategory = Category(name=request.form['name'],
                                picture=request.form['picture'],
@@ -444,8 +533,15 @@ def createCategory():
 @app.route('/categories/<int:category_id>/edit/', methods=['GET', 'POST'])
 @ratelimit(limit=300, per=30 * 1)
 def editCategory(category_id):
+    """
+        This function renders the Edit Category Template
+
+        If the user is not logged in it redirects to the Login page
+    """
+    if 'username' not in login_session:
+        return redirect('/login')
     editedCategory = session.query(
-        Category).filter_by(id=category_id).one()
+        Category).filter_by(id=category_id).one_or_none()
     if request.method == 'POST':
         if request.form['name']:
             editedCategory.name = request.form['name']
@@ -461,8 +557,15 @@ def editCategory(category_id):
 @app.route('/categories/<int:category_id>/delete', methods=['GET', 'POST'])
 @ratelimit(limit=300, per=30 * 1)
 def deleteCategory(category_id):
+    """
+        This function renders the Delete Category Template
+
+        If the user is not logged in it redirects to the Login page
+    """
+    if 'username' not in login_session:
+        return redirect('/login')
     category = session.query(
-        Category).filter_by(id=category_id).one()
+        Category).filter_by(id=category_id).one_or_none()
     concepts = session.query(Concept).filter_by(category_id=category_id).all()
     links = session.query(Links).filter_by(category_id=category_id).all()
     if request.method == 'POST':
@@ -483,7 +586,13 @@ def deleteCategory(category_id):
 @app.route('/categories/<int:category_id>/concepts/',
            methods=['GET', 'POST'])
 def getConcepts(category_id):
-    categories = session.query(Category).filter_by(id=category_id).one()
+    """
+        This function renders the Concepts Template
+
+        It lists concepts linked to the Category the user has clicked on
+    """
+    categories = session.query(Category).filter_by(
+                    id=category_id).one_or_none()
     concepts = session.query(Concept).filter_by(category_id=category_id)
     links = session.query(Links).filter_by(category_id=category_id)
     if request.method == 'POST':
@@ -505,6 +614,9 @@ def getConcepts(category_id):
 # JSON APIs to view Category Information
 @app.route('/categories/<int:category_id>/concepts/JSON')
 def conceptsJSON(category_id):
+    """
+        This function creates an API endpoint for the Concepts Table
+    """
     if category_id != 0:
         concepts = session.query(Concept).filter_by(category_id=category_id)
     else:
@@ -515,6 +627,9 @@ def conceptsJSON(category_id):
 # JSON APIs to view Category Information
 @app.route('/categories/<int:category_id>/links/JSON')
 def linksJSON(category_id):
+    """
+        This function creates an API endpoint for the Links Table
+    """
     if category_id != 0:
         links = session.query(Links).filter_by(category_id=category_id)
     else:
@@ -527,7 +642,15 @@ def linksJSON(category_id):
            methods=['GET', 'POST'])
 @ratelimit(limit=300, per=30 * 1)
 def createConcept(category_id):
-    user = session.query(User).filter_by(email=login_session['email']).one()
+    """
+        This function renders the Create new Concept Template
+
+        If the user is not logged in it redirects to the Login page
+    """
+    if 'username' not in login_session:
+        return redirect('/login')
+    user = session.query(User).filter_by(
+            email=login_session['email']).one_or_none()
     if request.method == 'POST':
         newConcept = Concept(name=request.form['name'],
                              description=request.form['definition'],
@@ -547,8 +670,12 @@ def createConcept(category_id):
 @app.route('/categories/<int:category_id>/concepts/edit_concepts/')
 @ratelimit(limit=300, per=30 * 1)
 def getEditConcepts(category_id):
+    """
+        This function renders the Editable Concepts Template
+    """
     concepts = session.query(Concept).filter_by(category_id=category_id)
-    user = session.query(User).filter_by(email=login_session['email']).one()
+    user = session.query(User).filter_by(
+            email=login_session['email']).one_or_none()
     return render_template('editConcepts.html', concepts=concepts,
                            category_id=category_id,
                            login_session=login_session, user=user)
@@ -559,8 +686,15 @@ def getEditConcepts(category_id):
            methods=['GET', 'POST'])
 @ratelimit(limit=300, per=30 * 1)
 def editConcept(concept_id, category_id):
+    """
+        This function renders the Edit Concepts Template
+
+        If the user is not logged in it redirects to the Login page
+    """
+    if 'username' not in login_session:
+        return redirect('/login')
     editedConcept = session.query(
-        Concept).filter_by(id=concept_id).one()
+        Concept).filter_by(id=concept_id).one_or_none()
     if request.method == 'POST':
         if request.form['name']:
             editedConcept.name = request.form['name']
@@ -582,8 +716,15 @@ def editConcept(concept_id, category_id):
            methods=['GET', 'POST'])
 @ratelimit(limit=300, per=30 * 1)
 def deleteConcept(concept_id, category_id):
+    """
+        This function renders the Delet Concept Template
+
+        If the user is not logged in it redirects to the Login page
+    """
+    if 'username' not in login_session:
+        return redirect('/login')
     concept = session.query(
-        Concept).filter_by(id=concept_id).one()
+        Concept).filter_by(id=concept_id).one_or_none()
     if request.method == 'POST':
         session.delete(concept)
         session.commit()
@@ -599,9 +740,16 @@ def deleteConcept(concept_id, category_id):
 # Get Concept information
 @app.route('/categories/<int:category_id>/concepts/<int:concept_id>')
 def getConceptInfo(concept_id, category_id):
-    categories = session.query(Category).filter_by(id=category_id).one()
+    """
+        This function renders the Concept Information Template
+
+        It shows the data for each Concept
+    """
+    categories = session.query(Category).filter_by(
+                    id=category_id).one_or_none()
     concepts = session.query(Concept).filter_by(category_id=category_id)
-    conceptInfo = session.query(Concept).filter_by(id=concept_id).one()
+    conceptInfo = session.query(Concept).filter_by(
+                    id=concept_id).one_or_none()
     return render_template('conceptInfo.html',
                            categories=categories,
                            concepts=concepts,
